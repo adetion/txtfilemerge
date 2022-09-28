@@ -4,10 +4,10 @@ file_ext = '.txt|.csv'
 yourpath = '../kehuan_error'
 yourfile = '../kehuan_error/你的文本文件.txt'
 
-def path_txt():
+def path_txt(yourpath, file_ext):
     txtfile.path_txt_encoding_to_utf8(yourpath, file_ext)
 
-def file_txt():
+def file_txt(yourfile, file_ext):
     txtfile.file_txt_encoding_to_utf8(yourfile, file_ext)
 
 
