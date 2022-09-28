@@ -60,7 +60,9 @@ def file_txt_encoding_to_utf8(input_file):
 
 def check_file_charset(file):
     with open(file, 'rb') as f:
-        return chardet.detect(f.read())
+        # 此处由 chardet.detect(f.read()) 修改成了 chardet.detect(f.read()[0:1024])
+        # 其目的是只读取文件头部1024个字节就对文件进行编码格式判断。加快了速度的同时，也避免了将全部读入后，可能导致无法获取真实的编码格式（或返回None，或无返回值导致异常退出读取）。部分GB2312格式的文本文件会出现此问题。
+        return chardet.detect(f.read()[0,1024])
 
 
 def smart_str(s, encoding="utf-8", strings_only=False, errors="strict"):
