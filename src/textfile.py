@@ -39,19 +39,20 @@ class txtfile:
                     print("字符集为 utf-8，不需要进行转换")
             except Exception as ERR:
                 """
-                此处对转换失败的某些GBK编码的文本文件进行了再次尝试转换。经测试有效。
+                此处对转换失败的某些GBK编码的文本文件进行了再次尝试转换。先测试用GBK解，再测试用GB18030解，经测试有效。
                 """
                 try:
-                    content = codecs.open(input_file, 'r', encoding='GBK').read()
+                    content = codecs.open(input_file, 'rb', encoding='gbk').read()
                     codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
-                    print("字符集转换成功：latin1-->UTF-8")
-                except Exception as ERR:
-                    print('Error:', ERR)
-                    print('error ERR')
-                    pass
-        else:
-            print(input_file,'文件(扩展名)不在允许转换范围内...')
-            pass
+                    print("字符集转换成功：GBK --> UTF-8")
+                except Exception as ERR1:
+                    try:
+                        content = codecs.open(input_file, 'rb', encoding='gb18030', errors='ignore').read()
+                        codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
+                        print("字符集转换成功：gb18030 --> UTF-8")
+                    except Exception as ERR2:
+                        print('error ERR2')
+                        pass
 
 
     def check_file_charset(file):
