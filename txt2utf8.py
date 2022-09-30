@@ -50,12 +50,17 @@ def file_txt_encoding_to_utf8(input_file):
         此处对转换失败的某些GBK编码的文本文件进行了再次尝试转换。经测试有效。
         """
         try:
-            content = codecs.open(input_file, 'r', encoding='GBK').read()
+            content = codecs.open(input_file, 'rb', encoding='gbk').read()
             codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
-            print("字符集转换成功：GBK-->UTF-8")
-        except Exception as ERR:
-            print('Error:', ERR)
-            pass
+            print("字符集转换成功：GBK --> UTF-8")
+        except Exception as ERR1:
+            try:
+                content = codecs.open(input_file, 'rb', encoding='gb18030', errors='ignore').read()
+                codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
+                print("字符集转换成功：gb18030 --> UTF-8")
+            except Exception as ERR2:
+                print('error ERR2')
+                pass
 
 
 def check_file_charset(file):
