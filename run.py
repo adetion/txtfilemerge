@@ -1,8 +1,11 @@
 from src.textfile import txtfile
 
 file_ext = '.txt|.csv'
-yourpath = '../kehuan_error'
-yourfile = '../kehuan_error/你的文本文件.txt'
+yourpath = '../txt/03古典相关'
+yourfile = '../txt/03古典相关/红楼梦/红楼梦.txt'
+
+def allpath_txt(yourpath, file_ext):
+    txtfile.allpath_txt_encoding_to_utf8(yourpath, file_ext)
 
 def path_txt(yourpath, file_ext):
     txtfile.path_txt_encoding_to_utf8(yourpath, file_ext)
@@ -15,8 +18,11 @@ def file_txt(yourfile, file_ext):
 if __name__ == '__main__':
     # 入口：
 
-    # 整体转换一个目录下所有文本文件
-    # path_txt(yourpath, file_ext)
+    # 整体转换一个目录（含子目录）下所有文件
+    allpath_txt(yourpath,file_ext)
+
+    # 整体转换一个目录（不含子目录）下所有文本文件
+    #path_txt(yourpath, file_ext)
 
     # 单独转换一个文件
-    file_txt(yourfile, file_ext)
+    #file_txt(yourfile, file_ext)
