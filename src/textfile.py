@@ -13,7 +13,7 @@ class txtfile:
 
     def allpath_txt_encoding_to_utf8(input_path, file_ext='.txt|.csv'):
         """ 某目录下(含子目录)所有文本文件编码格式全部转为UTF-8
-            传入参数：绝对路径
+            传入参数：相对路径。也可为绝对路径（windows可能会有BUG）
         """
         for dirpath, dirnames, filenames in os.walk(input_path):
             for filename in filenames:
@@ -27,7 +27,7 @@ class txtfile:
 
     def path_txt_encoding_to_utf8(input_path, file_ext='.txt|.csv'):
         """ 某目录下（不含子目录）所有文本文件编码格式全部转为UTF-8
-            传入参数：绝对路径
+            传入参数：相对路径。也可为绝对路径（windows可能会有BUG）
         """
         dis = os.listdir(input_path)
         for filename in dis:
@@ -40,7 +40,7 @@ class txtfile:
 
     def file_txt_encoding_to_utf8(input_file, file_ext='.txt|.csv'):
         """ 某文本编码格式转为UTF-8
-            传入参数：绝对路径下某文本文件名
+            传入参数：相对路径下某文本文件名。也可为绝对路径（windows可能会有BUG）
         """
         if os.path.splitext(input_file)[1].lower() in file_ext:
             f_type = txtfile.check_file_charset(input_file)
