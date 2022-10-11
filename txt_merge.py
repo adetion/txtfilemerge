@@ -24,9 +24,9 @@ out_txt = './out/out.txt'
 # 无法读取的原始txt文件会被挪到此目录（一般为编码非utf-8的文件，需要转码才能处理）
 error_path = './error'
 
-# 是否自动遮码。即是否对人名、地名、组织机构进行遮码处理。缺省为否。如果设置为Ture，整体处理速度会非常慢。这也是没有办法的事儿。
+# 是否自动遮码。默认启用遮码。即是否对人名、地名、组织机构进行遮码处理。缺省为否。如果设置为Ture，整体处理速度会非常慢。这也是没有办法的事儿。
 # 缺省不对人名进行遮码，如果一定要将人名也进行遮码，请将 obscuration(line,is_name=False) 函数中的 False 修改为 True
-is_obscuration = True
+is_obscuration = False
 
 # 字符过滤。注意，包含了过滤所有空格。如果文中英文较多，则需要将空格字符去掉。另行处理。
 """ 此处主要简单过滤掉一些非法或者不常见的干扰行文的字符 """
@@ -258,8 +258,9 @@ def main():
                 shutil.move(file_path, new_file_path)
 
         # 这个进度有点XX，鉴于原作就是如此，影响不大，就没有修改。（ 按：i126@126.com ）
-        sys.stdout.write('\r进度: ' + '%.2f%%' % (int(c) / int(b)))
-        sys.stdout.flush()
+        # 备注：若需要合并所有txt文件为一个语料txt文件，请取消以下两行注释
+        # sys.stdout.write('\r进度: ' + '%.2f%%' % (int(c) / int(b)))
+        # sys.stdout.flush()
 
 
 # 程序入口
