@@ -302,7 +302,7 @@ class filter:
         s = s.strip().lower()
         return s
 
-    def zh_to(text, flag=''):  # text为要转换的文本，flag=0代表简化繁，flag=1代表繁化简
+    def zh_to(text, flag=''):  # text为要转换的文本，flag=zh2tw代表简化繁，flag=zh2cn代表繁化简
         if flag == 'zh2cn':
             rule = 'zh-hans'
         elif flag == 'zh2tw':
@@ -439,7 +439,7 @@ class toutf8:
                         print("字符集转换成功：gb18030 --> UTF-8")
                     except Exception as ERR2:
                         try:
-                            content = codecs.open(input_file, 'rb', encoding='big5').read()
+                            content = codecs.open(input_file, 'rb', encoding='big5').read()   # 新加入了对大五码文本文件的自动转码
                             codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
                             print("字符集转换成功：gb18030 --> UTF-8")
                         except Exception as ERR3:
