@@ -281,7 +281,7 @@ class filter:
 
     def clean_en_line(s):
         """
-        :param s: 清洗爬取的中文语料格式
+        :param s: 清洗爬取的外文语料格式
         :return:
         """
         import re
