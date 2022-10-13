@@ -11,6 +11,12 @@ import io
 from django.utils.encoding import force_str
 from django.utils.functional import Promise
 from src.langconv import Converter
+from tqdm import tqdm
+import time
+
+
+global notes
+notes = ''
 
 class filter:
 
@@ -100,6 +106,10 @@ class filter:
         # 将大于等于3个连续的英文字母均替换为3个
         for chinese_character in re.findall("([A-Za-z])\\1{3,}", string):
             string = re.sub("[" + chinese_character + "]{3,}", chinese_character * 3, string)
+
+        # 将特殊引号置换为统一的双引号
+        string = string.replace('「','“')
+        string = string.replace('」', '”')
 
         return string
 
@@ -355,20 +365,32 @@ class filter:
 
     def file(inputfile, outpath, file_ext='.txt|.csv', flag=''):
         out_txt = outpath + '/' + os.path.basename(inputfile)
+        total = sum(1 for _ in open(inputfile))
         with open(inputfile, "r", encoding='utf-8') as f1, \
-                open(out_txt, "w", encoding='utf-8') as f2:
+                open(out_txt, "w", encoding='utf-8') as f2, tqdm(
+                    desc='文件：' + os.path.basename(inputfile) + ' 编码：' + notes + ' ',
+                    unit=' 行',
+                    total=total,
+                    unit_scale=True,
+                    ncols=120,
+            ) as bar:
             for line in f1:
                 line = filter.linedata(line,flag)
+                time.sleep(0.001)
+                bar.update()
                 if line == ' ' or line == '':
                     line = line.strip("")
                     f2.write(line)
                 else:
                     f2.write("{}\n".format(line))
+            bar.close()
             f2.write('\n')
             f2.close()
-        print(out_txt,' 初级数据清洗完毕！')
+
+        #print(out_txt,' 初级数据清洗完毕！')
 
     def allpath(input_path, outpath, file_ext='.txt|.csv', flag=''):
+        print('='*50,'数据清洗中','='*50)
         for dirpath, dirnames, filenames in os.walk(input_path):
             for filename in filenames:
                 try:
@@ -378,6 +400,7 @@ class filter:
                         filter.file(full_path_of_file,outpath,file_ext,flag)
                 except Exception as ERR:
                     print('Error:', ERR)
+        print('=' * 50, '数据清洗完成', '=' * 50)
 
 
 class toutf8:
@@ -422,18 +445,23 @@ class toutf8:
         """ 某文本编码格式转为UTF-8
             传入参数：绝对路径下某文本文件名
         """
+        global notes
         if os.path.splitext(input_file)[1].lower() in file_ext:
             f_type = toutf8.check_file_charset(input_file)
-            print(input_file, "原始字符集为：", f_type['encoding'])
+            #print(input_file, "原始字符集为：", f_type['encoding'])
+            #notes = "原始字符集为：" + f_type['encoding']
+            # print(notes)
             try:
                 if f_type and 'encoding' in f_type.keys() and f_type['encoding'] != 'utf-8':
                     with codecs.open(input_file, 'rb', f_type['encoding'], errors='ignore') as f:
                         content = toutf8.smart_str(f.read())
                     with codecs.open(input_file, 'wb', 'utf-8') as f:
                         f.write(content)
-                    print("字符集转换成功：自动")
+                    notes = "字符集转换成功：自动"
+                    # print(notes)
                 else:
                     pass
+                    notes = "utf-8"
                     #print("字符集为 utf-8，无需转换")
             except Exception as ERR:
                 """
@@ -442,17 +470,20 @@ class toutf8:
                 try:
                     content = codecs.open(input_file, 'rb', encoding='gbk').read()
                     codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
-                    print("字符集转换成功：GBK --> UTF-8")
+                    notes = "字符集转换成功：GBK --> UTF-8"
+                    # print(notes)
                 except Exception as ERR1:
                     try:
                         content = codecs.open(input_file, 'rb', encoding='gb18030', errors='ignore').read()
                         codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
-                        print("字符集转换成功：gb18030 --> UTF-8")
+                        notes = "字符集转换成功：gb18030 --> UTF-8"
+                        # print(notes)
                     except Exception as ERR2:
                         try:
                             content = codecs.open(input_file, 'rb', encoding='big5').read()
                             codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
-                            print("字符集转换成功：gb18030 --> UTF-8")
+                            notes = "字符集转换成功：gb18030 --> UTF-8"
+                            #print(notes)
                         except Exception as ERR3:
                             print('error ERR3')
                             pass
@@ -502,7 +533,8 @@ def filter_delline(line):
     WORDS_ARR = '分割线|该章节已被锁定|三五中文网|(大结局)|（大结局）|未完待续:|未完待续：|未完待续|人物介绍:|人物介绍：|人物介绍|楔子|正文卷|正文卷:|正文卷：|全部章节|' \
                 '红袖添香网|红袖添香文学网|绿色资源网|全文完|全书完|Tag列表：|Tag列表:|Tag列表|downcc.com|久久电子书|用户上传之内容|作品仅供读者预览|搜索关键字|本图书由|' \
                 '八_零_电_子_书|下载后24小时|更多txt|新书开张|Bud1%E%DSDB`|Bud1%E%DSDB|作者：|作者:|作者|内容简介：|内容简介:|内容简介|内容提要：|内容提要:|内容提要|作品赏析：|作品赏析:|作品赏析' \
-                '|（完）|(完)|( 完 )|（ 完 ）|{全文完}|{ 全文完 }|-正文-|……|…|序言|前言|序|知乎|简介：|</div>|<br/>|bxzw.com|</p>|&nbsp|&nbsp;|( )|&amp;|(图)|[目录]|，且听下回分解'
+                '|（完）|(完)|( 完 )|（ 完 ）|{全文完}|{ 全文完 }|-正文-|序言|前言|序幕|序言|知乎|简介：|</div>|<br/>|bxzw.com|</p>|&nbsp|&nbsp;|( )|&amp;|(图)|[目录]|，且听下回分解|7017k' \
+                '|正文'
     """ 要严格过滤掉的字符串，即找到该字符串，则直接置换为空 """
     line = re.sub(WORDS_ARR, '', line)
 
@@ -510,9 +542,9 @@ def filter_delline(line):
 
     # 行首过滤。数组形式。数组中每个元素均要用单引号框住。数组元素之间用逗号间隔。此处也是要注意过滤的优先级的。比如  （《,》） 先过滤，再过滤 《,》
     """ 行首开始两字符串间，含两字符串及中间包含部分，一起清除 """
-    LINESTART_BETWEEN2WORDS = ['《(,)》', '（《,》）', '【,】', '本章第,章', '第,章',
-                               '第,节', '第,篇', '第,幕', '第,首', '第,卷', '第,段', '第,部', '第,回', '第,册', '第,炮',
-                               '第,季', '第,集', '第,更', '###第,章','未知,后来如何']
+    LINESTART_BETWEEN2WORDS = ['《(,)》', '（《,》）', '【,】', '本章第,章', '第,章：', '第,章，', '第,章、', '第,章.', '第,章','第,节：',
+                               '第,节', '第,篇', '第,幕', '第,首', '第,卷', '第,段', '第,部分', '第,部', '第,回', '第,册', '第,炮',
+                               '第,季', '第,集', '第,更', '###第,章', '未知,后来如何', '第,折', '第,出']
 
     """ 行首开始两字符串间，含两字符串及中间包含部分，一起清除 """
     array_str_length = len(LINESTART_BETWEEN2WORDS)
@@ -522,13 +554,16 @@ def filter_delline(line):
         end_str = array_str.split(',')[1]
         if start_str in line:
             if end_str in line:
-                line = deleteByStartAndEnd(line,start_str,end_str)
+                line = deleteByStartAndEnd(line, start_str, end_str)
+                if start_str in line:
+                    if end_str in line:
+                        line = deleteByStartAndEnd(line, start_str, end_str)
         else:
             line = line
 
     # 字符过滤。注意，包含了过滤所有空格。如果文中英文较多，则需要将空格字符去掉。另行处理。
     """ 此处主要简单过滤掉一些非法或者不常见的干扰行文的字符 """
-    FILTER_WORDS = '＂\'・＃＄＆＇＊＋－-／＜＝=＞◆★●☆@€＠［＼］＾＿｀｛｜｝～｟｠｢｣､\u3000、〃〈〉「」『』【】〔〕〖〗〘〙〚〛〜〟〰〾〿﹑﻿'
+    FILTER_WORDS = '＂\'・＃＄＆＇＊＋－-／~＜＝=＞◆★●☆@€＠［＼］＾＿｀｛｜｝～｟｠｢｣､\u3000、〃〈〉【】〔〕〖〗〘〙〚〛〜〟〰〾〿﹑﻿'
     """ 字符串中多空格变单空格,不需要的字符过滤掉 """
     words = '[' + FILTER_WORDS + ']'
     line = re.sub(words, '', line)
@@ -548,7 +583,12 @@ def filter_delline(line):
                      '剧情省略', '存稿已到', '由于最近比较忙', '没时间上线', '喜欢cosplay的朋友们', '看来打错字了',
                      '免费小说阅读', '真 意 书 盟', '牛bb小说阅读网', '翻译：', '修订：', '终审：', 'DDD', 'PS.', 'PS:',
                      'PS：', '下一页', '主要人物表', 'shouda8', '作者有话说','章节内容开始','本文内容由','书籍介绍:',
-                     '内容版权','一鸣扫描，雪儿校对','小说来自','-开始-','---','TXT电子书','全本小说','-结束-'
+                     '内容版权','一鸣扫描，雪儿校对','小说来自','-开始-','---','TXT电子书','全本小说','-结束-',
+                     'txt80.com', '(求收藏求推荐)', '求收藏', '求月票', '求推荐', '求三连', '点赞收藏', '求转发',
+                     '写在前面', '本站 0', '本站0','cncnz.net','┗','┃','┏','谢谢大家，爱你们','喜欢网配的',
+                     '免费电子书','电子书城','q━','qrqr','(n)','┊','t━','瑶池电子书','发新文了','所以如果大家还想继续看下去的话',
+                     '(*^','∩_∩','（￣￣','如有雷同，实属巧合','16K小说网','┇','主角：','配角：','书快电子书','书快书快',
+                     '（放心','―END―','― END ―'
                      ]
     # 以下是过滤不干净的，单独进行过滤处理。部分有用文字虽然也被清除，但整体对文章没多大影响。如果过滤关键字为纯英文的，则统一自动转小写进行匹配。
     """ 对过滤仍然不干净的，单独处理。这个处理手段比较粗暴。只要包含过滤词，则整行清除。 """
@@ -578,3 +618,5 @@ def deleteByStartAndEnd(s, start, end):
     # 将内容替换为控制符串
     result = s.replace(x3, "")
     return result
+
+
