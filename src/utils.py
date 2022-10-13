@@ -281,7 +281,7 @@ class filter:
 
     def clean_en_line(s):
         """
-        :param s: 清洗爬取的外文语料格式
+        :param s: 清洗爬取的中文语料格式
         :return:
         """
         import re
@@ -302,7 +302,7 @@ class filter:
         s = s.strip().lower()
         return s
 
-    def zh_to(text, flag=''):  # text为要转换的文本，flag=zh2tw代表简化繁，flag=zh2cn代表繁化简
+    def zh_to(text, flag=''):  # text为要转换的文本，flag=0代表简化繁，flag=1代表繁化简
         if flag == 'zh2cn':
             rule = 'zh-hans'
         elif flag == 'zh2tw':
@@ -311,9 +311,18 @@ class filter:
             return text
         return Converter(rule).convert(text)
 
+    def filter_hidden_char(linestr):
+        """ 过滤不可见字符 """
+        for i in range(0, 32):
+            linestr = linestr.replace(chr(i), '')
+        linestr = linestr.replace(chr(127), '')
+        return linestr
+
     def linedata(line='', flag=''):
         # 过滤前后空格
         line = line.strip()
+        # 过滤不可见字符
+        line = filter.filter_hidden_char(line)
         # 过滤表情
         line = filter.filter_emoji(line)
         # 过滤html
@@ -338,6 +347,8 @@ class filter:
         line = filter.zh_to(line,flag)
         # 过滤中文字符之间空格
         line = filter.filter_cn_space(line)
+        # 符合条件的强行删行
+        line = filter_delline(line)
         # 空行清空
         if line == '\n': line = ''
         return line
@@ -439,7 +450,7 @@ class toutf8:
                         print("字符集转换成功：gb18030 --> UTF-8")
                     except Exception as ERR2:
                         try:
-                            content = codecs.open(input_file, 'rb', encoding='big5').read()   # 新加入了对大五码文本文件的自动转码
+                            content = codecs.open(input_file, 'rb', encoding='big5').read()
                             codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
                             print("字符集转换成功：gb18030 --> UTF-8")
                         except Exception as ERR3:
@@ -484,4 +495,86 @@ class toutf8:
                 yield line.strip()
 
 
+def filter_delline(line):
 
+    # 字符串过滤。以 | 进行间隔的长字符串。每个单独的字符串之间必须用 | 进行间隔。
+    """ 要严格过滤掉的字符串，即找到该字符串，则直接置换为空。举例说明过滤的优先级：比如先过滤'序言'，后过滤'序'，则是不至于漏掉'言'字。 """
+    WORDS_ARR = '分割线|该章节已被锁定|三五中文网|(大结局)|（大结局）|未完待续:|未完待续：|未完待续|人物介绍:|人物介绍：|人物介绍|楔子|正文卷|正文卷:|正文卷：|全部章节|' \
+                '红袖添香网|红袖添香文学网|绿色资源网|全文完|全书完|Tag列表：|Tag列表:|Tag列表|downcc.com|久久电子书|用户上传之内容|作品仅供读者预览|搜索关键字|本图书由|' \
+                '八_零_电_子_书|下载后24小时|更多txt|新书开张|Bud1%E%DSDB`|Bud1%E%DSDB|作者：|作者:|作者|内容简介：|内容简介:|内容简介|内容提要：|内容提要:|内容提要|作品赏析：|作品赏析:|作品赏析' \
+                '|（完）|(完)|( 完 )|（ 完 ）|{全文完}|{ 全文完 }|-正文-|……|…|序言|前言|序|知乎|简介：|</div>|<br/>|bxzw.com|</p>|&nbsp|&nbsp;|( )|&amp;|(图)|[目录]|，且听下回分解'
+    """ 要严格过滤掉的字符串，即找到该字符串，则直接置换为空 """
+    line = re.sub(WORDS_ARR, '', line)
+
+
+
+    # 行首过滤。数组形式。数组中每个元素均要用单引号框住。数组元素之间用逗号间隔。此处也是要注意过滤的优先级的。比如  （《,》） 先过滤，再过滤 《,》
+    """ 行首开始两字符串间，含两字符串及中间包含部分，一起清除 """
+    LINESTART_BETWEEN2WORDS = ['《(,)》', '（《,》）', '【,】', '本章第,章', '第,章',
+                               '第,节', '第,篇', '第,幕', '第,首', '第,卷', '第,段', '第,部', '第,回', '第,册', '第,炮',
+                               '第,季', '第,集', '第,更', '###第,章','未知,后来如何']
+
+    """ 行首开始两字符串间，含两字符串及中间包含部分，一起清除 """
+    array_str_length = len(LINESTART_BETWEEN2WORDS)
+    for k in range(array_str_length):
+        array_str = LINESTART_BETWEEN2WORDS[k]
+        start_str = array_str.split(',')[0]
+        end_str = array_str.split(',')[1]
+        if start_str in line:
+            if end_str in line:
+                line = deleteByStartAndEnd(line,start_str,end_str)
+        else:
+            line = line
+
+    # 字符过滤。注意，包含了过滤所有空格。如果文中英文较多，则需要将空格字符去掉。另行处理。
+    """ 此处主要简单过滤掉一些非法或者不常见的干扰行文的字符 """
+    FILTER_WORDS = '＂\'・＃＄＆＇＊＋－-／＜＝=＞◆★●☆@€＠［＼］＾＿｀｛｜｝～｟｠｢｣､\u3000、〃〈〉「」『』【】〔〕〖〗〘〙〚〛〜〟〰〾〿﹑﻿'
+    """ 字符串中多空格变单空格,不需要的字符过滤掉 """
+    words = '[' + FILTER_WORDS + ']'
+    line = re.sub(words, '', line)
+
+    # 整行过滤。数组形式。数组中每个元素均要用单引号框住。数组元素之间用逗号间隔。
+    """ 行内只要包含该字符串，则整行清除 """
+    DEL_ROW_WORDS = ['找好书，看好书', '本作品来自互联网', '连载完毕', '本站所有资源', '内容简介：', '作者：', '・ 序言',
+                     '导读：', '序言：', '仅供试阅', '简介:', 'chapter', '跪求各位', '有话要说：', '文案：',
+                     '内容标签：', '-正文-', '本章字数', '17k.com', '更新时间:', '更新时间：', '内容介绍：', '内容介绍:',
+                     '主角资料', '正文第', '分节阅读', '书名：', '24小时内删除', '备注：', '——BY', '请支持正版',
+                     '标签：', '晋江文学', '总点击', '本文又', '全本精校', '?书名:','关注公众号', '切勿商用', '书友上传',
+                     '起点首页', '起点女生网', '鲜花支持哦', '邀请驻站', '上推荐了', '起点榜', '正文故事', '故事背景：', '故事背景:',
+                     '作品相关', '鲸鱼阅读', '编辑推荐', '久久网', '起点读书', '起点app', '银河奖', '出版社:', '出版时间',
+                     "ISBN", '本书', '推荐收藏', '更多精彩图书', 'qisuwang','txtsk.com.cn', 'txt书库',
+                     '群已成立', 'lvsetxt.com', '全书完', '上一页', 'blackjasmine', '后一页', '前一页', '回目录',
+                     'abada.cn', 'txt小说', '电子书来自', '小说开头', '*****', '更新时间', '起点中文网', '书友群',
+                     '剧情省略', '存稿已到', '由于最近比较忙', '没时间上线', '喜欢cosplay的朋友们', '看来打错字了',
+                     '免费小说阅读', '真 意 书 盟', '牛bb小说阅读网', '翻译：', '修订：', '终审：', 'DDD', 'PS.', 'PS:',
+                     'PS：', '下一页', '主要人物表', 'shouda8', '作者有话说','章节内容开始','本文内容由','书籍介绍:',
+                     '内容版权','一鸣扫描，雪儿校对','小说来自','-开始-','---','TXT电子书','全本小说','-结束-'
+                     ]
+    # 以下是过滤不干净的，单独进行过滤处理。部分有用文字虽然也被清除，但整体对文章没多大影响。如果过滤关键字为纯英文的，则统一自动转小写进行匹配。
+    """ 对过滤仍然不干净的，单独处理。这个处理手段比较粗暴。只要包含过滤词，则整行清除。 """
+    array_str_length = len(DEL_ROW_WORDS)
+    for l in range(array_str_length):
+        import string
+        for m in DEL_ROW_WORDS[l]:
+            if m in string.ascii_lowercase + string.ascii_uppercase:
+                if DEL_ROW_WORDS[l].lower() in line.lower():
+                    line = ''
+            elif DEL_ROW_WORDS[l] in line:
+                line = ''
+
+    line = line.replace('。。','。')
+    line = line.replace('，，', '，')
+    line = line.replace('，。', '。')
+    line = line.replace('。，', '，')
+    return line
+
+
+def deleteByStartAndEnd(s, start, end):
+    # 找出两个字符串在原始字符串中的位置，开始位置是：开始始字符串的最左边第一个位置，结束位置是：结束字符串的最右边的第一个位置
+    x1 = s.index(start)
+    x2 = s.index(end) + len(end)  # s.index()函数算出来的是字符串的最左边的第一个位置
+    # 找出两个字符串之间的内容
+    x3 = s[x1:x2]
+    # 将内容替换为控制符串
+    result = s.replace(x3, "")
+    return result
