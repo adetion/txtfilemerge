@@ -14,11 +14,12 @@ from src.langconv import Converter
 from tqdm import tqdm
 import time
 
-
+# 注释全局变量
 global notes
 notes = ''
 
 class filter:
+    """ 清洗过滤类 """
 
     def is_chinese(uchar):
         """判断一个unicode是否是汉字"""
@@ -83,6 +84,7 @@ class filter:
 
 
     def stemming(string):
+        """ 文本变形词标准化 """
         # 标点符号/特殊符号词典
         PUNCTUATION_LIST = [
             " ", "　", ",", "，", ".", "。", "!", "?", ";", "、", "~", "|", "·", ":", "+", "\-", "—", "*", "/", "／", "\\",
@@ -114,11 +116,13 @@ class filter:
         return string
 
     def filter_phone(linestr):
+        """ 过滤电话号码 """
         for i in re.findall(r'[\+\(]?[1-9][0-9 .\-\(\)]{8,}[0-9]', linestr):
             linestr = linestr.replace(i,'')
         return linestr
 
     def filter_email(linestr):
+        """ 过滤电子邮件 """
         email = re.compile(r'[a-z0-9\-\.]+@[0-9a-z\-\.]+')
         emailset = set()  # 创建集合
         for em in email.findall(linestr):
@@ -129,10 +133,11 @@ class filter:
 
 
     def filter_cn(linestr):
+        """ 过滤中文字符 """
         return re.sub('[\u4e00-\u9fa5]', '', linestr)
 
     def filter_emoji(linestr, restr=''):
-        # 过滤表情
+        """ 过滤表情 """
         try:
             co = re.compile(u'['u'\U0001F300-\U0001F64F' u'\U0001F680-\U0001F6FF'u'\u2600-\u2B55]+')
         except re.error:
@@ -140,6 +145,7 @@ class filter:
         return co.sub(restr, linestr)
 
     def filter_html(text):
+        """ 过滤HTML """
         htmltags = ['div', 'ul', 'li', 'ol', 'p', 'span', 'form', 'br',
                     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
                     'hr', 'input',
@@ -180,6 +186,7 @@ class filter:
         return text
 
     def filter_url(linestr):
+        """ 过滤非HTML嵌套的URL网址 """
         regex = r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
         url = re.findall(regex, linestr)
         newlist = []
@@ -190,14 +197,13 @@ class filter:
         return linestr
 
     def filter_html_tags(linestr):
+        """ 过滤部分HTML标签 """
         dr = re.compile(r'<[^>]+>', re.S)
         dd = dr.sub('', linestr)
         return dd
 
     def filter_Html_Tag(htmlstr):
-        '''
-        过滤html中的标签
-        '''
+        """ 过滤 HTML 标签 """
         # 兼容换行
         s = htmlstr.replace('\r\n', '\n')
         s = htmlstr.replace('\r', '\n')
@@ -223,7 +229,7 @@ class filter:
         s = re_p.sub('\n', s)  # p标签换行
         s = re_h.sub('', s)  # 去HTML标签
         s = re_comment.sub('', s)  # 去HTML注释
-        # s = re_lineblank.sub('', s)  # 去空白字符
+        # s = re_lineblank.sub('', s)  # 去空白字符，鉴于会对英文字符间隔造成影响，此处暂不过滤空格
         s = re_linenum.sub('\n', s)  # 连续换行保留1个
         s = re_hendstr.sub('', s)  # 去头尾空白字符
         s = re_blanks.sub(' ',s) # 连续空格保留1个
@@ -262,6 +268,7 @@ class filter:
         return htmlStr
 
     def filter_cn_space(linestr):
+        """ 过滤中文字符间隔 """
         dd = re.sub(r'(?<=[\u4e00-\u9fa5]) +(?=[\u4e00-\u9fa5])', '', linestr)
         dd = re.sub("(?<![ -~]) (?![ -~])", "", dd)
         return dd
@@ -291,7 +298,7 @@ class filter:
 
     def clean_en_line(s):
         """
-        :param s: 清洗爬取的中文语料格式
+        :param s: 清洗爬取的外文语料格式
         :return:
         """
         import re
@@ -312,7 +319,8 @@ class filter:
         s = s.strip().lower()
         return s
 
-    def zh_to(text, flag=''):  # text为要转换的文本，flag=0代表简化繁，flag=1代表繁化简
+    def zh_to(text, flag=''):
+        """ text 为要转换的文本，flag=zh2tw 代表简化繁，flag=zh2cn 代表繁化简，默认不转 """
         if flag == 'zh2cn':
             rule = 'zh-hans'
         elif flag == 'zh2tw':
@@ -329,6 +337,7 @@ class filter:
         return linestr
 
     def linedata(line='', flag=''):
+        """ 主函数：调用清洗过滤规则，对行数据进行清洗 """
         # 过滤前后空格
         line = line.strip()
         # 过滤不可见字符
@@ -355,7 +364,7 @@ class filter:
         line = filter.stemming(line)
         # 文本简繁体转换
         line = filter.zh_to(line,flag)
-        # 过滤中文字符之间空格
+        # 过滤中文字符之间空格。二次过滤中文字符间空格的目的在于，有可能简繁体转码中出现异常情况。但测试中异常情况暂未发现。
         line = filter.filter_cn_space(line)
         # 符合条件的强行删行
         line = filter_delline(line)
@@ -364,6 +373,7 @@ class filter:
         return line
 
     def file(inputfile, outpath, file_ext='.txt|.csv', flag=''):
+        """ 单文件数据清洗，带进度条 """
         out_txt = outpath + '/' + os.path.basename(inputfile)
         total = sum(1 for _ in open(inputfile))
         with open(inputfile, "r", encoding='utf-8') as f1, \
@@ -390,13 +400,16 @@ class filter:
         #print(out_txt,' 初级数据清洗完毕！')
 
     def allpath(input_path, outpath, file_ext='.txt|.csv', flag=''):
+        """ 目录级数据清洗，含所有子目录下文件 """
         print('='*50,'数据清洗中','='*50)
         for dirpath, dirnames, filenames in os.walk(input_path):
             for filename in filenames:
                 try:
                     if os.path.splitext(filename)[1].lower() in file_ext:
                         full_path_of_file = dirpath + "/" + filename
+                        # 强制转码UTF-8
                         toutf8.file_txt_encoding_to_utf8(full_path_of_file, file_ext)
+                        # 逐个文件清洗
                         filter.file(full_path_of_file,outpath,file_ext,flag)
                 except Exception as ERR:
                     print('Error:', ERR)
@@ -404,14 +417,18 @@ class filter:
 
 
 class toutf8:
+    """ 转码utf-8类 """
 
     def allpath(yourpath, file_ext):
+        """ 目录级转码，含子目录 """
         toutf8.allpath_txt_encoding_to_utf8(yourpath, file_ext)
 
     def path(yourpath, file_ext):
+        """ 单目录转码，不含子目录 """
         toutf8.path_txt_encoding_to_utf8(yourpath, file_ext)
 
     def file(yourfile, file_ext):
+        """ 单文件转码 """
         toutf8.file_txt_encoding_to_utf8(yourfile, file_ext)
 
     def allpath_txt_encoding_to_utf8(input_path, file_ext='.txt|.csv'):
@@ -465,7 +482,7 @@ class toutf8:
                     #print("字符集为 utf-8，无需转换")
             except Exception as ERR:
                 """
-                此处对转换失败的某些GBK编码的文本文件进行了再次尝试转换。先测试用GBK解，再测试用GB18030解，经测试有效。
+                此处对转换失败的某些其他编码的文本文件进行了再次尝试转换。反复测试用GBK、GB18030、BIG5解，经测试有效。
                 """
                 try:
                     content = codecs.open(input_file, 'rb', encoding='gbk').read()
@@ -482,7 +499,7 @@ class toutf8:
                         try:
                             content = codecs.open(input_file, 'rb', encoding='big5').read()
                             codecs.open(input_file, 'w', encoding='UTF-8-SIG').write(content)
-                            notes = "字符集转换成功：gb18030 --> UTF-8"
+                            notes = "字符集转换成功：big5 --> UTF-8"
                             #print(notes)
                         except Exception as ERR3:
                             print('error ERR3')
@@ -494,6 +511,7 @@ class toutf8:
 
 
     def check_file_charset(file):
+        """ 获取文件编码格式 """
         with open(file, 'rb') as f:
             # 此处由 chardet.detect(f.read()) 修改成了 chardet.detect(f.read()[0:1024])
             # 其目的是只读取文件头部1024个字节就对文件进行编码格式判断。加快了速度的同时，也避免了将全部读入后，可能导致无法获取真实的编码格式（或返回None，或无返回值导致异常退出读取）。部分GB2312格式的文本文件会出现此问题。
@@ -527,7 +545,7 @@ class toutf8:
 
 
 def filter_delline(line):
-
+    """ 行清洗 """
     # 字符串过滤。以 | 进行间隔的长字符串。每个单独的字符串之间必须用 | 进行间隔。
     """ 要严格过滤掉的字符串，即找到该字符串，则直接置换为空。举例说明过滤的优先级：比如先过滤'序言'，后过滤'序'，则是不至于漏掉'言'字。 """
     WORDS_ARR = '分割线|该章节已被锁定|三五中文网|(大结局)|（大结局）|未完待续:|未完待续：|未完待续|人物介绍:|人物介绍：|人物介绍|楔子|正文卷|正文卷:|正文卷：|全部章节|' \
@@ -610,6 +628,7 @@ def filter_delline(line):
 
 
 def deleteByStartAndEnd(s, start, end):
+    """ 清洗某字符串中，两子字符串（含两字符串）间内容 """
     # 找出两个字符串在原始字符串中的位置，开始位置是：开始始字符串的最左边第一个位置，结束位置是：结束字符串的最右边的第一个位置
     x1 = s.index(start)
     x2 = s.index(end) + len(end)  # s.index()函数算出来的是字符串的最左边的第一个位置
@@ -619,4 +638,32 @@ def deleteByStartAndEnd(s, start, end):
     result = s.replace(x3, "")
     return result
 
+
+def formatsize(bytes):
+    """ 字节换算 """
+    try:
+        bytes = float(bytes)  # 默认字节
+        kb = bytes / 1024  # 换算KB
+    except:
+        print("字节格式有误")
+        return "Error"
+
+    if kb >= 1024:
+        M = kb / 1024  # KB换成M
+        if M >= 1024:
+            G = M / 1024
+            return "%fG" % G
+        else:
+            return "%fM" % M
+    else:
+        return "%fkb" % kb
+
+
+def Getfile(path):
+    """ 获取文件大小 """
+    try:
+        size = os.path.getsize(path)
+        return formatsize(size)
+    except:
+        print("获取文件大小错误")
 
